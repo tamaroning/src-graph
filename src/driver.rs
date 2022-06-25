@@ -10,17 +10,16 @@ extern crate rustc_lint_defs;
 extern crate rustc_session;
 extern crate rustc_span;
 
-use rustc_hir as hir;
-use rustc_lint::{LateContext, LateLintPass, LintContext};
-use rustc_lint_defs::impl_lint_pass;
-use rustc_session::declare_tool_lint;
-use std::{path::Path, process, str};
+mod item;
+
+use once_cell::sync::OnceCell;
+use std::{env, path::Path, process, str};
 
 // NOTE: do not output to stdout because it is parsed by Cargo
 fn main() {
     rustc_driver::init_rustc_env_logger();
     std::process::exit(rustc_driver::catch_with_exit_code(move || {
-        let orig_args: Vec<String> = std::env::args().collect();
+        let orig_args: Vec<String> = env::args().collect();
 
         let mut rustc_args = orig_args;
 
@@ -50,10 +49,25 @@ fn main() {
 
 struct CallBacks;
 
+#[derive(Debug)]
+pub struct SourceInfo {
+    structs: Vec<String>,
+}
+
+impl SourceInfo {
+    fn new() -> Self {
+        SourceInfo { structs: vec![] }
+    }
+}
+
+static SOURCE_INFO: OnceCell<SourceInfo> = OnceCell::new();
+
 impl rustc_driver::Callbacks for CallBacks {
     fn config(&mut self, config: &mut rustc_interface::Config) {
+        SOURCE_INFO.set(SourceInfo::new()).unwrap();
+
         config.register_lints = Some(Box::new(move |_sess, lint_store| {
-            lint_store.register_late_pass(|| Box::new(VariantDef));
+            lint_store.register_late_pass(|| Box::new(item::Item::new()));
         }));
     }
 
@@ -64,24 +78,5 @@ impl rustc_driver::Callbacks for CallBacks {
     ) -> rustc_driver::Compilation {
         println!("after analysis");
         rustc_driver::Compilation::Stop
-    }
-}
-
-declare_tool_lint! {
-    pub crate::VARIANT_DEF,
-    Warn,
-    "",
-    report_in_external_macro: false
-}
-
-struct VariantDef;
-impl_lint_pass!(VariantDef => [VARIANT_DEF]);
-
-impl<'tcx> LateLintPass<'tcx> for VariantDef {
-    fn check_variant(&mut self, cx: &LateContext<'tcx>, vari: &'tcx hir::Variant<'tcx>) {
-        println!("variant def found");
-        let source_map = cx.sess().source_map();
-        let snippet = source_map.span_to_snippet(vari.span).unwrap();
-        dbg!(snippet);
     }
 }
