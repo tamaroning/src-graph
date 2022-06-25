@@ -2,7 +2,7 @@
 (WIP) cargo subcommand which shows struct dependencies
 
 
-## install
+# Install
 From crates.io
 ```
 $ cargo install src-graph
