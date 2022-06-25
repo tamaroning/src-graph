@@ -3,6 +3,15 @@ name = "src-graph"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "cargo-src-graph"
+path = "src/main.rs"
+
+[[bin]]
+name = "src-graph-driver"
+path = "src/driver.rs"
 
 [dependencies]
+
+[package.metadata.rust-analyzer]
+rustc_private = true
