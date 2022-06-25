@@ -1,7 +1,11 @@
 [package]
 name = "src-graph"
+authors = ["tamaron <tamaron(at)gmail.com>"]
 version = "0.1.0"
 edition = "2021"
+description = "cargo subcommand which shows struct dependencies"
+repository = "https://github.com/tamaroning/src-graph"
+license = "MIT"
 
 [[bin]]
 name = "cargo-src-graph"
