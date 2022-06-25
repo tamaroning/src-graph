@@ -15,8 +15,7 @@ fn driver_path() -> PathBuf {
 }
 
 fn main() {
-    let orig_args: Vec<String> = std::env::args().collect();
-    if orig_args.len() > 2 {
+    if env::args().len() > 2 {
         println!("{USAGE}");
         return;
     }
