@@ -60,7 +60,6 @@ impl rustc_driver::Callbacks for CallBacks {
         _compiler: &rustc_interface::interface::Compiler,
         queries: &'tcx rustc_interface::Queries<'tcx>,
     ) -> rustc_driver::Compilation {
-        println!("after analysis");
         let mut info = SourceInfo::new();
 
         queries.global_ctxt().unwrap().take().enter(|tcx| {
