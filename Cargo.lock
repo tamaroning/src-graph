@@ -3,14 +3,14 @@
 version = 3
 
 [[package]]
-name = "once_cell"
-version = "1.12.0"
+name = "rustc-ap-graphviz"
+version = "662.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
+checksum = "1cbd590ef84c483c1f45a71bd27ae2ff18d1ea393780feb1e48eff9cd8e6e5c7"
 
 [[package]]
 name = "src-graph"
 version = "0.1.0"
 dependencies = [
- "once_cell",
+ "rustc-ap-graphviz",
 ]

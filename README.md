@@ -1,6 +1,9 @@
 # src-graph
 (WIP) cargo subcommand which shows struct dependencies
 
+# Requirement
+- Cargo
+- Graphviz (for generating an image)
 
 # Install
 From crates.io
@@ -19,4 +22,9 @@ $ cagro install --path .
 Run in your rust project
 ```
 $ cargo src-graph
+```
+
+then generate an image from the dot file
+```
+$ dot -Tpng -o example.png example.dot
 ```
