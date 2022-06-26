@@ -13,7 +13,7 @@ use graph::output_dot;
 use rustc_hir::ItemKind;
 use rustc_middle::ty::subst::GenericArgKind;
 use source_info::SourceInfo;
-use std::{env, path::Path, process, str, fs::create_dir};
+use std::{env, fs::create_dir, path::Path, process, str};
 
 const SRC_GRAPH_DIR: &'static str = "./.src_graph";
 
@@ -25,7 +25,7 @@ fn main() {
 
         let mut rustc_args = orig_args;
 
-        // When this driver is executed by setting RUSTC_WORKSPACE_WRAPPER, 
+        // When this driver is executed by setting RUSTC_WORKSPACE_WRAPPER,
         // Cargo sets "rustc" as the first argument.
         // Code below handles this case.
         let wrapper_mode =
@@ -66,55 +66,58 @@ impl rustc_driver::Callbacks for CallBacks {
             let items = tcx.hir().items();
 
             for item in items {
-                // TODO: support other ADTs than struct
+                let mut variants = Vec::new();
                 match &item.kind {
                     ItemKind::Struct(variant, _) | ItemKind::Union(variant, _) => {
-                        let parent_def_path = tcx.def_path(item.def_id.to_def_id());
-                        let parent_path = parent_def_path
-                            .to_filename_friendly_no_crate()
-                            .replace('-', "_");
+                        variants.push(variant);
+                    }
+                    ItemKind::Enum(enum_def, _) => {
+                        for variant in enum_def.variants {
+                            variants.push(&variant.data);
+                        }
+                    }
+                    _ => continue,
+                };
 
-                        info.register_adt(parent_path.clone());
+                let parent_def_path = tcx.def_path(item.def_id.to_def_id());
+                let parent_path = parent_def_path
+                    .to_filename_friendly_no_crate()
+                    .replace('-', "_");
 
-                        for field in variant.fields() {
-                            // Get a type T of the fields
-                            let child_ty = rustc_typeck::hir_ty_to_ty(tcx, field.ty);
+                info.register_adt(parent_path.clone());
 
-                            // check each type S reachable from T
-                            // e.g. Foo<Bar<i32>, u32, T> where T is generic -> [Foo<Bar<i32>, Bar<i32>, i32, u32]
-                            for ty in child_ty.walk() {
-                                if let GenericArgKind::Type(ty) = ty.unpack() {
-                                    // If S has a type of ADT
-                                    if let Some(adt_def) = ty.ty_adt_def() {
-                                        let def_path = tcx.def_path(adt_def.did);
-                                        let child_path = def_path
-                                            .to_filename_friendly_no_crate()
-                                            .replace('-', "_");
+                for variant in variants {
+                    for field in variant.fields() {
+                        // Get a type T of the fields
+                        let child_ty = rustc_typeck::hir_ty_to_ty(tcx, field.ty);
 
-                                        // Get crate name which defines S
-                                        let crate_name = tcx.crate_name(def_path.krate);
-                                        let crate_name = crate_name.as_str().to_string();
+                        // check each type S reachable from T
+                        // e.g. Foo<Bar<i32>, u32, T> where T is generic -> [Foo<Bar<i32>, Bar<i32>, i32, u32]
+                        for ty in child_ty.walk() {
+                            if let GenericArgKind::Type(ty) = ty.unpack() {
+                                // If S has a type of ADT
+                                if let Some(adt_def) = ty.ty_adt_def() {
+                                    let def_path = tcx.def_path(adt_def.did);
+                                    let child_path =
+                                        def_path.to_filename_friendly_no_crate().replace('-', "_");
 
-                                        // If S is NOT defined in std
-                                        if !is_in_std(&crate_name) {
-                                            info.add_dependency(&parent_path, child_path);
-                                        }
+                                    // Get crate name which defines S
+                                    let crate_name = tcx.crate_name(def_path.krate);
+                                    let crate_name = crate_name.as_str().to_string();
+
+                                    // If S is NOT defined in std
+                                    if !is_in_std(&crate_name) {
+                                        info.add_dependency(&parent_path, child_path);
                                     }
                                 }
                             }
                         }
                     }
-                    ItemKind::Enum(enum_def, _) => {
-                        for variant in enum_def.variants {
-                            
-                        }
-                    }
-                    _ => (),
                 }
             }
         });
 
-        create_dir(SRC_GRAPH_DIR).unwrap();
+        let _ = create_dir(SRC_GRAPH_DIR);
 
         output_dot(&Path::new(SRC_GRAPH_DIR).join("struct_deps.dot"), &info);
         rustc_driver::Compilation::Stop

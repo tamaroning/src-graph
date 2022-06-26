@@ -1,4 +1,4 @@
-use dot::{render, GraphWalk, Labeller, LabelText};
+use dot::{render, GraphWalk, LabelText, Labeller};
 use rustc_ap_graphviz as dot;
 use std::{borrow::Cow, fs::File, path::Path};
 
