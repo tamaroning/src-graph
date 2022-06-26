@@ -3,8 +3,8 @@
 extern crate rustc_driver;
 extern crate rustc_hir;
 extern crate rustc_interface;
-extern crate rustc_typeck;
 extern crate rustc_middle;
+extern crate rustc_typeck;
 
 mod graph;
 mod source_info;
@@ -73,7 +73,7 @@ impl rustc_driver::Callbacks for CallBacks {
                         let parent_path = parent_def_path
                             .to_filename_friendly_no_crate()
                             .replace('-', "_");
-                        dbg!(&parent_path);
+
                         let parent_adt = Adt::new(parent_path);
                         info.register_adt(parent_adt.clone());
 
@@ -109,8 +109,6 @@ impl rustc_driver::Callbacks for CallBacks {
                 }
             }
         });
-
-        dbg!(&info);
 
         output_dot(Path::new("./example.dot"), &info);
         rustc_driver::Compilation::Stop
