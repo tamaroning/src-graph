@@ -13,7 +13,9 @@ use graph::output_dot;
 use rustc_hir::ItemKind;
 use rustc_middle::ty::subst::GenericArgKind;
 use source_info::{Adt, SourceInfo};
-use std::{env, path::Path, process, str};
+use std::{env, path::Path, process, str, fs::create_dir};
+
+const SRC_GRAPH_DIR: &'static str = "./.src_graph";
 
 // NOTE: do not output to stdout because Cargo parses stdout
 fn main() {
@@ -23,7 +25,8 @@ fn main() {
 
         let mut rustc_args = orig_args;
 
-        // When this driver is executed by setting RUSTC_WORKSPACE_WRAPPER, Cargo sets "rustc" as the first argument.
+        // When this driver is executed by setting RUSTC_WORKSPACE_WRAPPER, 
+        // Cargo sets "rustc" as the first argument.
         // Code below handles this case.
         let wrapper_mode =
             rustc_args.get(1).map(Path::new).and_then(Path::file_stem) == Some("rustc".as_ref());
@@ -110,7 +113,9 @@ impl rustc_driver::Callbacks for CallBacks {
             }
         });
 
-        output_dot(Path::new("./example.dot"), &info);
+        create_dir(SRC_GRAPH_DIR).unwrap();
+
+        output_dot(&Path::new(SRC_GRAPH_DIR).join("struct_deps.dot"), &info);
         rustc_driver::Compilation::Stop
     }
 }

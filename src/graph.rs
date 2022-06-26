@@ -1,4 +1,4 @@
-use dot::{render, GraphWalk, Labeller};
+use dot::{render, GraphWalk, Labeller, LabelText};
 use rustc_ap_graphviz as dot;
 use std::{borrow::Cow, fs::File, path::Path};
 
@@ -17,6 +17,10 @@ impl<'a> Labeller<'a> for Edges {
 
     fn node_id(&'a self, n: &Nd) -> dot::Id<'a> {
         dot::Id::new(n.clone()).unwrap()
+    }
+
+    fn node_shape(&'a self, _node: &Self::Node) -> Option<dot::LabelText<'a>> {
+        Some(LabelText::label("box"))
     }
 }
 

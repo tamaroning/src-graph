@@ -1,5 +1,8 @@
 # src-graph
-(WIP) cargo subcommand which shows struct dependencies
+Cargo subcommand which shows structs dependencies.
+src-graph shows only dependencies *between* user-defined structs for now.
+
+![screenshot1](screenshot1.png)
 
 # Requirement
 - Cargo
@@ -26,5 +29,5 @@ $ cargo src-graph
 
 then generate an image from the dot file
 ```
-$ dot -Tpng -o example.png example.dot
+$ dot -Tpng -o ./.src_graph/struct_deps.png ./.src_graph/struct_deps.dot
 ```
