@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::{HashMap, HashSet}, rc::Rc};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Adt {
@@ -13,8 +13,8 @@ impl Adt {
 
 #[derive(Debug)]
 pub struct SourceInfo {
-    // adjacency list which represents variant dependencies
-    dep: HashMap<Adt, Vec<Adt>>,
+    // adjacency list which represents ADT dependencies
+    dep: HashMap<Adt, HashSet<Adt>>,
 }
 
 impl SourceInfo {
@@ -25,11 +25,11 @@ impl SourceInfo {
     }
 
     pub fn register_adt(&mut self, adt: Adt) {
-        self.dep.insert(adt, vec![]);
+        self.dep.insert(adt, HashSet::new());
     }
 
     pub fn add_dependency(&mut self, parent: &Adt, child: Adt) {
         let orig = self.dep.get_mut(parent).unwrap();
-        orig.push(child);
+        orig.insert(child);
     }
 }

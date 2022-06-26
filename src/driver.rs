@@ -70,7 +70,6 @@ impl rustc_driver::Callbacks for CallBacks {
         let mut info = source_info::SourceInfo::new();
 
         queries.global_ctxt().unwrap().take().enter(|tcx| {
-            let krate = tcx.hir().krate();
             let items = tcx.hir().items();
 
             for item in items {
@@ -85,14 +84,27 @@ impl rustc_driver::Callbacks for CallBacks {
                         info.register_adt(parent_adt.clone());
 
                         for field in variant.fields() {
+                            // Get a type T of the fields
                             let child_ty = rustc_typeck::hir_ty_to_ty(tcx, field.ty);
-                            if let Some(child_adt_def) = child_ty.ty_adt_def() {
-                                let child_def_path = tcx.def_path(child_adt_def.did);
-                                let crate_name = tcx.crate_name(child_def_path.krate);
-                                let crate_name = crate_name.as_str().to_string();
-                                let child_path = child_def_path.to_string_no_crate_verbose();
-                                if !is_in_std(&crate_name) || true {
-                                    info.add_dependency(&parent_adt, Adt::new(child_path));
+
+                            // check each type S reachable from T
+                            // e.g. Foo<Bar<i32>, u32, T> where T is generic -> [Foo<Bar<i32>, Bar<i32>, i32, u32]
+                            for ty in child_ty.walk() {
+                                let ty = ty.expect_ty();
+
+                                // If S has a type of ADT
+                                if let Some(adt_def) = ty.ty_adt_def() {
+                                    let def_path = tcx.def_path(adt_def.did);
+                                    let child_path = def_path.to_string_no_crate_verbose();
+
+                                    // Get crate name which defines S
+                                    let crate_name = tcx.crate_name(def_path.krate);
+                                    let crate_name = crate_name.as_str().to_string();
+
+                                    // If S is NOT defined in std
+                                    if !is_in_std(&crate_name) {
+                                        info.add_dependency(&parent_adt, Adt::new(child_path));
+                                    }
                                 }
                             }
                         }
