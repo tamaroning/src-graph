@@ -12,7 +12,7 @@ mod source_info;
 use graph::output_dot;
 use rustc_hir::ItemKind;
 use rustc_middle::ty::subst::GenericArgKind;
-use source_info::{Adt, SourceInfo};
+use source_info::SourceInfo;
 use std::{env, path::Path, process, str, fs::create_dir};
 
 const SRC_GRAPH_DIR: &'static str = "./.src_graph";
@@ -68,16 +68,13 @@ impl rustc_driver::Callbacks for CallBacks {
             for item in items {
                 // TODO: support other ADTs than struct
                 match &item.kind {
-                    ItemKind::Struct(variant, _) => {
-                        //let parent_ty = tcx.typeck(item.def_id);
+                    ItemKind::Struct(variant, _) | ItemKind::Union(variant, _) => {
                         let parent_def_path = tcx.def_path(item.def_id.to_def_id());
-
                         let parent_path = parent_def_path
                             .to_filename_friendly_no_crate()
                             .replace('-', "_");
 
-                        let parent_adt = Adt::new(parent_path);
-                        info.register_adt(parent_adt.clone());
+                        info.register_adt(parent_path.clone());
 
                         for field in variant.fields() {
                             // Get a type T of the fields
@@ -100,11 +97,16 @@ impl rustc_driver::Callbacks for CallBacks {
 
                                         // If S is NOT defined in std
                                         if !is_in_std(&crate_name) {
-                                            info.add_dependency(&parent_adt, Adt::new(child_path));
+                                            info.add_dependency(&parent_path, child_path);
                                         }
                                     }
                                 }
                             }
+                        }
+                    }
+                    ItemKind::Enum(enum_def, _) => {
+                        for variant in enum_def.variants {
+                            
                         }
                     }
                     _ => (),

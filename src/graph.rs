@@ -61,7 +61,7 @@ pub fn output_dot(output: &Path, info: &SourceInfo) {
     let mut edges = vec![];
     for (parent, children) in info.deps().iter() {
         for child in children.iter() {
-            edges.push((parent.name.clone(), child.name.clone()));
+            edges.push((parent.clone(), child.clone()));
         }
     }
     let edges = Edges(edges);

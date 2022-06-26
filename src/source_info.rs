@@ -2,21 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 type Deps<T> = HashMap<T, HashSet<T>>;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-pub struct Adt {
-    pub name: String,
-}
-
-impl Adt {
-    pub fn new(name: String) -> Self {
-        Adt { name }
-    }
-}
-
 #[derive(Debug)]
 pub struct SourceInfo {
     // adjacency list which represents ADT dependencies
-    deps: Deps<Adt>,
+    deps: Deps<String>,
 }
 
 impl SourceInfo {
@@ -24,16 +13,16 @@ impl SourceInfo {
         SourceInfo { deps: Deps::new() }
     }
 
-    pub fn register_adt(&mut self, adt: Adt) {
+    pub fn register_adt(&mut self, adt: String) {
         self.deps.insert(adt, HashSet::new());
     }
 
-    pub fn add_dependency(&mut self, parent: &Adt, child: Adt) {
+    pub fn add_dependency(&mut self, parent: &String, child: String) {
         let orig = self.deps.get_mut(parent).unwrap();
         orig.insert(child);
     }
 
-    pub fn deps(&self) -> Deps<Adt> {
+    pub fn deps(&self) -> Deps<String> {
         self.deps.clone()
     }
 }
