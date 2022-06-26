@@ -2,3 +2,4 @@
 .vscode
 tests/test_proj
 example.*
+.src_graph
