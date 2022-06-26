@@ -11,11 +11,11 @@ mod source_info;
 
 use graph::output_dot;
 use rustc_hir::ItemKind;
-use rustc_middle::ty::subst::GenericArgKind;
+use rustc_middle::ty::{subst::GenericArgKind, AdtKind};
 use source_info::SourceInfo;
 use std::{env, fs::create_dir, path::Path, process, str};
 
-const SRC_GRAPH_DIR: &'static str = "./.src_graph";
+const SRC_GRAPH_DIR: &str = "./.src_graph";
 
 // NOTE: do not output to stdout because Cargo parses stdout
 fn main() {
@@ -67,14 +67,20 @@ impl rustc_driver::Callbacks for CallBacks {
 
             for item in items {
                 let mut variants = Vec::new();
-                match &item.kind {
-                    ItemKind::Struct(variant, _) | ItemKind::Union(variant, _) => {
+                let mut parent_label = match &item.kind {
+                    ItemKind::Struct(variant, _) => {
                         variants.push(variant);
+                        "struct_".to_owned()
+                    }
+                    ItemKind::Union(variant, _) => {
+                        variants.push(variant);
+                        "union_".to_owned()
                     }
                     ItemKind::Enum(enum_def, _) => {
                         for variant in enum_def.variants {
                             variants.push(&variant.data);
                         }
+                        "enum_".to_owned()
                     }
                     _ => continue,
                 };
@@ -83,8 +89,9 @@ impl rustc_driver::Callbacks for CallBacks {
                 let parent_path = parent_def_path
                     .to_filename_friendly_no_crate()
                     .replace('-', "_");
+                parent_label += &parent_path;
 
-                info.register_adt(parent_path.clone());
+                info.register_adt(parent_label.clone());
 
                 for variant in variants {
                     for field in variant.fields() {
@@ -101,13 +108,16 @@ impl rustc_driver::Callbacks for CallBacks {
                                     let child_path =
                                         def_path.to_filename_friendly_no_crate().replace('-', "_");
 
+                                    let child_label =
+                                        adt_kind_to_string(&adt_def.adt_kind()) + &child_path;
+
                                     // Get crate name which defines S
                                     let crate_name = tcx.crate_name(def_path.krate);
                                     let crate_name = crate_name.as_str().to_string();
 
                                     // If S is NOT defined in std
                                     if !is_in_std(&crate_name) {
-                                        info.add_dependency(&parent_path, child_path);
+                                        info.add_dependency(&parent_label, child_label);
                                     }
                                 }
                             }
@@ -126,4 +136,14 @@ impl rustc_driver::Callbacks for CallBacks {
 
 fn is_in_std(crate_name: &str) -> bool {
     matches!(crate_name, "std" | "core" | "alloc" | "proc_macro" | "test")
+}
+
+fn adt_kind_to_string(k: &AdtKind) -> String {
+    use AdtKind::*;
+    match k {
+        Struct => "struct_",
+        Union => "union_",
+        Enum => "enum_",
+    }
+    .to_owned()
 }

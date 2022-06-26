@@ -1,11 +1,11 @@
 use dot::{render, GraphWalk, LabelText, Labeller};
 use rustc_ap_graphviz as dot;
-use std::{borrow::Cow, fs::File, path::Path};
+use std::{borrow::Cow, fs::File, path::Path, rc::Rc};
 
 use crate::source_info::SourceInfo;
 
-type Nd = String;
-type Ed = (String, String);
+type Nd = Rc<String>;
+type Ed = (Rc<String>, Rc<String>);
 struct Edges(Vec<Ed>);
 
 impl<'a> Labeller<'a> for Edges {
@@ -16,7 +16,7 @@ impl<'a> Labeller<'a> for Edges {
     }
 
     fn node_id(&'a self, n: &Nd) -> dot::Id<'a> {
-        dot::Id::new(n.clone()).unwrap()
+        dot::Id::new(format!("{}", *n)).unwrap()
     }
 
     fn node_shape(&'a self, _node: &Self::Node) -> Option<dot::LabelText<'a>> {
@@ -55,13 +55,15 @@ impl<'a> GraphWalk<'a> for Edges {
     }
 }
 
-// TODO: remove clone and abstract types
 pub fn output_dot(output: &Path, info: &SourceInfo) {
     let mut output_file = File::create(output).unwrap();
     let mut edges = vec![];
-    for (parent, children) in info.deps().iter() {
-        for child in children.iter() {
-            edges.push((parent.clone(), child.clone()));
+
+    // create indecies
+    for (parent, children) in info.deps().into_iter() {
+        let parent = Rc::new(parent);
+        for child in children.into_iter() {
+            edges.push((Rc::clone(&parent), Rc::new(child)));
         }
     }
     let edges = Edges(edges);

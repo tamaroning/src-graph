@@ -13,8 +13,8 @@ impl SourceInfo {
         SourceInfo { deps: Deps::new() }
     }
 
-    pub fn register_adt(&mut self, adt: String) {
-        self.deps.insert(adt, HashSet::new());
+    pub fn register_adt(&mut self, path: String) {
+        self.deps.insert(path, HashSet::new());
     }
 
     pub fn add_dependency(&mut self, parent: &String, child: String) {
