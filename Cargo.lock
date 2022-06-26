@@ -10,7 +10,7 @@ checksum = "1cbd590ef84c483c1f45a71bd27ae2ff18d1ea393780feb1e48eff9cd8e6e5c7"
 
 [[package]]
 name = "src-graph"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "rustc-ap-graphviz",
 ]
