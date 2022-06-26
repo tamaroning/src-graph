@@ -1,30 +1,21 @@
 #![feature(rustc_private, let_chains)]
 
-extern crate rustc_ast;
 extern crate rustc_driver;
-extern crate rustc_errors;
 extern crate rustc_hir;
-extern crate rustc_hir_pretty;
 extern crate rustc_interface;
-extern crate rustc_lint;
-extern crate rustc_lint_defs;
-extern crate rustc_resolve;
-extern crate rustc_session;
-extern crate rustc_span;
 extern crate rustc_typeck;
+extern crate rustc_middle;
 
 mod graph;
 mod source_info;
 
 use graph::output_dot;
 use rustc_hir::ItemKind;
-use rustc_hir_pretty::ty_to_string;
-use source_info::SourceInfo;
+use rustc_middle::ty::subst::GenericArgKind;
+use source_info::{Adt, SourceInfo};
 use std::{env, path::Path, process, str};
 
-use crate::source_info::Adt;
-
-// NOTE: do not output to stdout because it is parsed by Cargo
+// NOTE: do not output to stdout because Cargo parses stdout
 fn main() {
     rustc_driver::init_rustc_env_logger();
     std::process::exit(rustc_driver::catch_with_exit_code(move || {
@@ -67,18 +58,21 @@ impl rustc_driver::Callbacks for CallBacks {
         queries: &'tcx rustc_interface::Queries<'tcx>,
     ) -> rustc_driver::Compilation {
         println!("after analysis");
-        let mut info = source_info::SourceInfo::new();
+        let mut info = SourceInfo::new();
 
         queries.global_ctxt().unwrap().take().enter(|tcx| {
             let items = tcx.hir().items();
 
             for item in items {
+                // TODO: support other ADTs than struct
                 match &item.kind {
                     ItemKind::Struct(variant, _) => {
                         //let parent_ty = tcx.typeck(item.def_id);
                         let parent_def_path = tcx.def_path(item.def_id.to_def_id());
 
-                        let parent_path = parent_def_path.to_string_no_crate_verbose();
+                        let parent_path = parent_def_path
+                            .to_filename_friendly_no_crate()
+                            .replace('-', "_");
                         dbg!(&parent_path);
                         let parent_adt = Adt::new(parent_path);
                         info.register_adt(parent_adt.clone());
@@ -90,20 +84,22 @@ impl rustc_driver::Callbacks for CallBacks {
                             // check each type S reachable from T
                             // e.g. Foo<Bar<i32>, u32, T> where T is generic -> [Foo<Bar<i32>, Bar<i32>, i32, u32]
                             for ty in child_ty.walk() {
-                                let ty = ty.expect_ty();
+                                if let GenericArgKind::Type(ty) = ty.unpack() {
+                                    // If S has a type of ADT
+                                    if let Some(adt_def) = ty.ty_adt_def() {
+                                        let def_path = tcx.def_path(adt_def.did);
+                                        let child_path = def_path
+                                            .to_filename_friendly_no_crate()
+                                            .replace('-', "_");
 
-                                // If S has a type of ADT
-                                if let Some(adt_def) = ty.ty_adt_def() {
-                                    let def_path = tcx.def_path(adt_def.did);
-                                    let child_path = def_path.to_string_no_crate_verbose();
+                                        // Get crate name which defines S
+                                        let crate_name = tcx.crate_name(def_path.krate);
+                                        let crate_name = crate_name.as_str().to_string();
 
-                                    // Get crate name which defines S
-                                    let crate_name = tcx.crate_name(def_path.krate);
-                                    let crate_name = crate_name.as_str().to_string();
-
-                                    // If S is NOT defined in std
-                                    if !is_in_std(&crate_name) {
-                                        info.add_dependency(&parent_adt, Adt::new(child_path));
+                                        // If S is NOT defined in std
+                                        if !is_in_std(&crate_name) {
+                                            info.add_dependency(&parent_adt, Adt::new(child_path));
+                                        }
                                     }
                                 }
                             }
@@ -116,15 +112,11 @@ impl rustc_driver::Callbacks for CallBacks {
 
         dbg!(&info);
 
-        output_dot(&Path::new("./example.dot"));
+        output_dot(Path::new("./example.dot"), &info);
         rustc_driver::Compilation::Stop
     }
 }
 
-// TODO: refine
 fn is_in_std(crate_name: &str) -> bool {
-    match crate_name {
-        "std" | "core" | "alloc" | "proc_macro" | "test" => true,
-        _ => false,
-    }
+    matches!(crate_name, "std" | "core" | "alloc" | "proc_macro" | "test")
 }

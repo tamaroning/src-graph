@@ -1,16 +1,14 @@
+use dot::{render, GraphWalk, Labeller};
 use rustc_ap_graphviz as dot;
-use std::{fs::File, io::Write, path::Path};
+use std::{borrow::Cow, fs::File, path::Path};
 
-type Nd = isize;
-type Ed = (isize, isize);
+use crate::source_info::SourceInfo;
+
+type Nd = String;
+type Ed = (String, String);
 struct Edges(Vec<Ed>);
 
-fn render_to<W: Write>(output: &mut W) {
-    let edges = Edges(vec![(0, 1), (0, 2), (1, 3), (2, 3), (3, 4), (4, 4)]);
-    dot::render(&edges, output).unwrap()
-}
-
-impl<'a> dot::Labeller<'a> for Edges {
+impl<'a> Labeller<'a> for Edges {
     type Node = Nd;
     type Edge = Ed;
     fn graph_id(&'a self) -> dot::Id<'a> {
@@ -18,24 +16,23 @@ impl<'a> dot::Labeller<'a> for Edges {
     }
 
     fn node_id(&'a self, n: &Nd) -> dot::Id<'a> {
-        dot::Id::new(format!("N{}", *n)).unwrap()
+        dot::Id::new(n.clone()).unwrap()
     }
 }
 
-impl<'a> dot::GraphWalk<'a> for Edges {
+impl<'a> GraphWalk<'a> for Edges {
     type Node = Nd;
     type Edge = Ed;
     fn nodes(&self) -> dot::Nodes<'a, Nd> {
-        // (assumes that |N| \approxeq |E|)
         let &Edges(ref v) = self;
-        let mut nodes = Vec::with_capacity(v.len());
-        for &(s, t) in v {
-            nodes.push(s);
-            nodes.push(t);
+        let mut nodes = Vec::with_capacity(v.len() * 2);
+        for (s, t) in v {
+            nodes.push(s.clone());
+            nodes.push(t.clone());
         }
         nodes.sort();
         nodes.dedup();
-        nodes.into()
+        Cow::from(nodes)
     }
 
     fn edges(&'a self) -> dot::Edges<'a, Ed> {
@@ -44,17 +41,25 @@ impl<'a> dot::GraphWalk<'a> for Edges {
     }
 
     fn source(&self, e: &Ed) -> Nd {
-        let &(s, _) = e;
-        s
+        let (s, _) = &e;
+        s.clone()
     }
 
     fn target(&self, e: &Ed) -> Nd {
-        let &(_, t) = e;
-        t
+        let (_, t) = &e;
+        t.clone()
     }
 }
 
-pub fn output_dot(path: &Path) {
-    let mut file = File::create(path).unwrap();
-    render_to(&mut file)
+// TODO: remove clone and abstract types
+pub fn output_dot(output: &Path, info: &SourceInfo) {
+    let mut output_file = File::create(output).unwrap();
+    let mut edges = vec![];
+    for (parent, children) in info.deps().iter() {
+        for child in children.iter() {
+            edges.push((parent.name.clone(), child.name.clone()));
+        }
+    }
+    let edges = Edges(edges);
+    render(&edges, &mut output_file).unwrap()
 }

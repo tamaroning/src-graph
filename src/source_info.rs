@@ -1,35 +1,39 @@
-use std::{collections::{HashMap, HashSet}, rc::Rc};
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+type Deps<T> = HashMap<T, HashSet<T>>;
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Adt {
-    name: String
+    pub name: String,
 }
 
 impl Adt {
     pub fn new(name: String) -> Self {
-        Adt {name}
+        Adt { name }
     }
 }
 
 #[derive(Debug)]
 pub struct SourceInfo {
     // adjacency list which represents ADT dependencies
-    dep: HashMap<Adt, HashSet<Adt>>,
+    deps: Deps<Adt>,
 }
 
 impl SourceInfo {
     pub fn new() -> Self {
-        SourceInfo {
-            dep: HashMap::new(),
-        }
+        SourceInfo { deps: Deps::new() }
     }
 
     pub fn register_adt(&mut self, adt: Adt) {
-        self.dep.insert(adt, HashSet::new());
+        self.deps.insert(adt, HashSet::new());
     }
 
     pub fn add_dependency(&mut self, parent: &Adt, child: Adt) {
-        let orig = self.dep.get_mut(parent).unwrap();
+        let orig = self.deps.get_mut(parent).unwrap();
         orig.insert(child);
+    }
+
+    pub fn deps(&self) -> Deps<Adt> {
+        self.deps.clone()
     }
 }
