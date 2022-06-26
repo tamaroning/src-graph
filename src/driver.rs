@@ -99,7 +99,7 @@ impl rustc_driver::Callbacks for CallBacks {
                         let child_ty = rustc_typeck::hir_ty_to_ty(tcx, field.ty);
 
                         // check each type S reachable from T
-                        // e.g. Foo<Bar<i32>, u32, T> where T is generic -> [Foo<Bar<i32>, Bar<i32>, i32, u32]
+                        // e.g. Foo<Bar<i32>, u32, T> where T is a generic param -> [Foo<Bar<i32>, Bar<i32>, i32, u32]
                         for ty in child_ty.walk() {
                             if let GenericArgKind::Type(ty) = ty.unpack() {
                                 // If S has a type of ADT
@@ -115,6 +115,7 @@ impl rustc_driver::Callbacks for CallBacks {
                                     let crate_name = tcx.crate_name(def_path.krate);
                                     let crate_name = crate_name.as_str().to_string();
 
+                                    // TODO: Should not add, if S is defined in an external crate
                                     // If S is NOT defined in std
                                     if !is_in_std(&crate_name) {
                                         info.add_dependency(&parent_label, child_label);
@@ -128,8 +129,8 @@ impl rustc_driver::Callbacks for CallBacks {
         });
 
         let _ = create_dir(SRC_GRAPH_DIR);
+        output_dot(&Path::new(SRC_GRAPH_DIR).join("adt_deps.dot"), &info);
 
-        output_dot(&Path::new(SRC_GRAPH_DIR).join("struct_deps.dot"), &info);
         rustc_driver::Compilation::Stop
     }
 }
