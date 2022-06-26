@@ -1,6 +1,9 @@
 # src-graph
-Cargo subcommand which shows structs dependencies.
-src-graph shows only dependencies *between* user-defined structs for now.
+Cargo subcommand which shows user-defined data type dependencies.
+
+(supports struct, enum, and union for now) 
+
+If you found a bug, please open an issue.
 
 ![screenshot1](screenshot1.png)
 
