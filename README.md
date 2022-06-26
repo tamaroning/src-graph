@@ -32,5 +32,5 @@ $ cargo src-graph
 
 then generate an image from the dot file
 ```
-$ dot -Tpng -o ./.src_graph/struct_deps.png ./.src_graph/struct_deps.dot
+$ dot -Tpng -o ./.src_graph/adt_deps.png ./.src_graph/adt_deps.dot
 ```
